@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { UserProfile } from '@/types';
-import { authService } from '@/services/auth.service';
+import { authService, ADMIN_EMAIL } from '@/services/auth.service';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 
 interface AuthState {
@@ -15,31 +15,34 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => {
-  // Escuchar cambios de sesión de Supabase Auth (OAuth callback, logout, etc.)
+  // Escuchar cambios reales de Supabase Auth (Google OAuth redirect, logout, expiración)
   if (isSupabaseConfigured) {
     supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         const user = session.user;
-        const isAdminEmail = user.email?.toLowerCase() === 'lorenzobuten02@gmail.com';
+        const isAdminEmail = user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
         const profile: UserProfile = {
           id: user.id,
           nombre: user.user_metadata?.full_name || user.user_metadata?.nombre || user.email?.split('@')[0] || 'Usuario',
-          telefono: user.user_metadata?.telefono || '',
+          telefono: user.user_metadata?.phone || '',
           rol: isAdminEmail ? 'admin' : 'customer',
           created_at: user.created_at,
         };
-        localStorage.setItem('user_session_profile', JSON.stringify(profile));
-        set({ user: profile, isAuthenticated: true, isLoading: false });
-      } else if (event === 'SIGNED_OUT') {
+        // Solo guardar sesiones reales de Supabase (no mock)
         localStorage.removeItem('user_session_profile');
-        set({ user: null, isAuthenticated: false, isLoading: false });
+        set({ user: profile, isAuthenticated: true, isLoading: false });
+      } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        if (event === 'SIGNED_OUT') {
+          localStorage.removeItem('user_session_profile');
+          set({ user: null, isAuthenticated: false, isLoading: false });
+        }
       }
     });
   }
 
   return {
     user: null,
-    isLoading: true,
+    isLoading: false,
     isAuthenticated: false,
 
     checkSession: async () => {
@@ -48,6 +51,7 @@ export const useAuthStore = create<AuthState>((set) => {
         const user = await authService.getCurrentUser();
         set({ user, isAuthenticated: !!user, isLoading: false });
       } catch {
+        // Si falla la verificación, tratar como invitado sin romper la app
         set({ user: null, isAuthenticated: false, isLoading: false });
       }
     },
@@ -82,7 +86,6 @@ export const useAuthStore = create<AuthState>((set) => {
 
     logout: async () => {
       await authService.logout();
-      localStorage.removeItem('user_session_profile');
       set({ user: null, isAuthenticated: false });
     },
   };
