@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, CreditCard, Truck, ShieldCheck } from 'lucide-react';
+import { CheckCircle, CreditCard, Truck, ArrowRight } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
+import { whatsappService } from '@/services/whatsapp.service';
+import { orderService } from '@/services/order.service';
+import { WhatsAppButton } from '@/components/checkout/WhatsAppButton';
+import { OrderData } from '@/types/order';
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const { items, getTotal, clearCart } = useCartStore();
+  const { items, getSubtotal, getITBIS, getTotal, clearCart } = useCartStore();
 
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
   const [ciudad, setCiudad] = useState('Santo Domingo');
   const [metodoPago, setMetodoPago] = useState('tarjeta');
+
   const [completado, setCompletado] = useState(false);
+  const [whatsappLink, setWhatsappLink] = useState('');
+  const [orderSummary, setOrderSummary] = useState<OrderData | null>(null);
 
   if (items.length === 0 && !completado) {
     return (
@@ -28,29 +35,81 @@ export const CheckoutPage: React.FC = () => {
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre || !telefono || !direccion) {
+    if (!nombre.trim() || !telefono.trim() || !direccion.trim()) {
       alert('Por favor completa todos los campos obligatorios');
       return;
     }
+
+    const orderData: OrderData = {
+      id: `ORD-${Date.now().toString().slice(-6)}`,
+      cliente_nombre: nombre.trim(),
+      cliente_telefono: telefono.trim(),
+      direccion: `${direccion.trim()}, ${ciudad}`,
+      metodo_pago: metodoPago,
+      items: items.map((i) => ({
+        nombre: i.product.nombre,
+        cantidad: i.cantidad,
+        precio: i.product.precio_oferta || i.product.precio,
+      })),
+      subtotal: getSubtotal(),
+      itbis: getITBIS(),
+      total: getTotal(),
+      created_at: new Date().toISOString(),
+    };
+
+    // Save order via dedicated order service
+    await orderService.saveOrder(orderData);
+
+    // Get WhatsApp link via dedicated whatsapp service
+    const waUrl = whatsappService.getWhatsAppUrl(orderData);
+
+    setWhatsappLink(waUrl);
+    setOrderSummary(orderData);
     setCompletado(true);
     clearCart();
+
+    // Open WhatsApp automatically
+    window.open(waUrl, '_blank');
   };
 
-  if (completado) {
+  if (completado && orderSummary) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center space-y-6">
+      <div className="max-w-lg mx-auto px-4 py-12 text-center space-y-6">
         <div className="w-20 h-20 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto text-emerald-400">
           <CheckCircle className="w-10 h-10" />
         </div>
-        <h1 className="text-3xl font-black text-white">¡Orden Confirmada!</h1>
-        <p className="text-sm text-slate-300">
-          Gracias por tu compra, <strong className="text-white">{nombre}</strong>. Hemos recibido tu pedido y te contactaremos por WhatsApp al <strong className="text-white">{telefono}</strong> para coordinar la entrega.
+        <div>
+          <span className="text-xs font-bold text-violet-400 uppercase tracking-wider">
+            PEDIDO #{orderSummary.id}
+          </span>
+          <h1 className="text-3xl font-black text-white mt-1">¡Orden Recibida!</h1>
+        </div>
+        <p className="text-sm text-slate-300 leading-relaxed">
+          Gracias por tu compra, <strong className="text-white">{orderSummary.cliente_nombre}</strong>. Haz clic abajo para enviar los detalles de tu pedido directamente por WhatsApp al administrador.
         </p>
+
+        <WhatsAppButton url={whatsappLink} />
+
+        <div className="p-4 rounded-xl bg-[#141417] border border-slate-800 text-left text-xs space-y-2">
+          <div className="flex justify-between text-slate-400">
+            <span>Cliente:</span>
+            <span className="text-white font-bold">{orderSummary.cliente_nombre}</span>
+          </div>
+          <div className="flex justify-between text-slate-400">
+            <span>Teléfono:</span>
+            <span className="text-white font-bold">{orderSummary.cliente_telefono}</span>
+          </div>
+          <div className="flex justify-between text-slate-400">
+            <span>Total:</span>
+            <span className="text-cyan-400 font-black text-sm">RD$ {orderSummary.total.toLocaleString()}</span>
+          </div>
+        </div>
+
         <button
           onClick={() => navigate('/')}
-          className="px-8 py-3.5 rounded-xl bg-violet-600 text-white font-bold text-sm hover:bg-violet-500 transition-all"
+          className="w-full py-3 rounded-xl bg-[#141417] border border-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-800 transition-all"
         >
           Volver al Inicio
         </button>
@@ -64,7 +123,7 @@ export const CheckoutPage: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          {/* Contact Details */}
+          {/* Shipping Form */}
           <div className="p-6 rounded-2xl bg-[#141417] border border-slate-800 space-y-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Truck className="w-5 h-5 text-violet-400" /> Información de Envío
@@ -78,7 +137,7 @@ export const CheckoutPage: React.FC = () => {
                   required
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
-                  placeholder="Ej: Juan Pérez"
+                  placeholder="Ej: Lorenzo Butén"
                   className="w-full bg-[#0a0a0d] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500"
                 />
               </div>
@@ -90,7 +149,7 @@ export const CheckoutPage: React.FC = () => {
                   required
                   value={telefono}
                   onChange={(e) => setTelefono(e.target.value)}
-                  placeholder="Ej: 809-555-0199"
+                  placeholder="Ej: 849-314-0441"
                   className="w-full bg-[#0a0a0d] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500"
                 />
               </div>
@@ -103,7 +162,7 @@ export const CheckoutPage: React.FC = () => {
                 required
                 value={direccion}
                 onChange={(e) => setDireccion(e.target.value)}
-                placeholder="Calle, Sector, N° de Edificio o Casa"
+                placeholder="Calle, Sector, N° de Casa o Edificio"
                 className="w-full bg-[#0a0a0d] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500"
               />
             </div>
@@ -115,7 +174,7 @@ export const CheckoutPage: React.FC = () => {
                 onChange={(e) => setCiudad(e.target.value)}
                 className="w-full bg-[#0a0a0d] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-violet-500"
               >
-                <option value="Santo Domingo">Santo Domingo (DN / Este / Norte / Ouest)</option>
+                <option value="Santo Domingo">Santo Domingo (DN / Este / Norte / Oeste)</option>
                 <option value="Santiago">Santiago de los Caballeros</option>
                 <option value="La Romana">La Romana</option>
                 <option value="Punta Cana">Punta Cana / Bávaro</option>
@@ -135,7 +194,7 @@ export const CheckoutPage: React.FC = () => {
               {[
                 { id: 'tarjeta', title: 'Tarjeta Crédito/Débito', sub: 'Visa, Mastercard' },
                 { id: 'transferencia', title: 'Transferencia', sub: 'Banreservas, BPD, BHD' },
-                { id: 'contraentrega', title: 'Contra Entrega', sub: 'Efectivo en mano' },
+                { id: 'contraentrega', title: 'Contra Entrega', sub: 'Efectivo al recibir' },
               ].map((m) => (
                 <button
                   type="button"
@@ -155,7 +214,7 @@ export const CheckoutPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Total Summary Sidebar */}
+        {/* Summary */}
         <div className="p-6 rounded-2xl bg-[#141417] border border-slate-800 space-y-6 h-fit">
           <h2 className="text-lg font-bold text-white border-b border-slate-800 pb-4">
             Resumen Final
@@ -178,9 +237,9 @@ export const CheckoutPage: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold text-sm hover:from-violet-500 hover:to-purple-500 shadow-lg shadow-violet-600/30 transition-all"
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold text-sm hover:from-violet-500 hover:to-purple-500 shadow-lg shadow-violet-600/30 flex items-center justify-center gap-2 transition-all"
           >
-            Confirmar y Realizar Pedido
+            Realizar Pedido y Enviar WhatsApp <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </form>
