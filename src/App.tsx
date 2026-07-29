@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { Layout } from '@/components/layout/Layout';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { ToastContainer } from '@/components/ui/ToastContainer';
 import { HomePage } from '@/pages/home/index';
 import { CatalogPage } from '@/pages/catalog/index';
 import { ProductDetailPage } from '@/pages/product-detail/index';
@@ -27,6 +28,7 @@ export const App: React.FC = () => {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
+          <ToastContainer />
           <Layout>
             <Routes>
               <Route path="/" element={<HomePage />} />

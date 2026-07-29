@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ShoppingBag, Check, Heart, Star } from 'lucide-react';
 import { Product } from '@/types';
 import { useCartStore } from '@/store/cartStore';
+import { useToastStore } from '@/store/toastStore';
 
 interface ProductCardProps {
   product: Product;
@@ -10,6 +11,7 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
   const addItem = useCartStore((s) => s.addItem);
+  const addToast = useToastStore((s) => s.addToast);
   const [added, setAdded] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -24,6 +26,7 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
     e.stopPropagation();
     addItem(product);
     setAdded(true);
+    addToast(`"${product.nombre}" agregado al carrito`, 'success');
     setTimeout(() => setAdded(false), 1800);
   };
 
@@ -31,6 +34,7 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
     e.preventDefault();
     e.stopPropagation();
     setIsFavorite(!isFavorite);
+    addToast(isFavorite ? 'Quitado de favoritos' : 'Guardado en favoritos', 'info');
   };
 
   return (

@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Star, ShieldCheck, Truck, ShoppingBag, ArrowLeft, Check, Sparkles } from 'lucide-react';
+import { Star, ArrowLeft, Check, ShoppingBag, Share2, MessageCircle } from 'lucide-react';
 import { productService } from '@/services/product.service';
 import { useCartStore } from '@/store/cartStore';
+import { useToastStore } from '@/store/toastStore';
 import { Product } from '@/types';
 
 export const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const addItem = useCartStore((s) => s.addItem);
+  const addToast = useToastStore((s) => s.addToast);
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,19 @@ export const ProductDetailPage: React.FC = () => {
   const handleAddToCart = () => {
     addItem(product);
     setAdded(true);
+    addToast(`"${product.nombre}" agregado al carrito`, 'success');
     setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = `🔥 ¡Mira este producto en Ecomerce Tech Store!\n\n*${product.nombre}*\n💰 Precio: RD$ ${(product.precio_oferta || product.precio).toLocaleString()}\n\nVer aquí: ${window.location.href}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    addToast('¡Enlace del producto copiado al portapapeles!', 'info');
   };
 
   return (
@@ -112,6 +126,22 @@ export const ProductDetailPage: React.FC = () => {
           </div>
 
           <p className="text-slate-300 text-sm leading-relaxed">{product.descripcion}</p>
+
+          {/* Share Product Buttons */}
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={handleShareWhatsApp}
+              className="py-2 px-4 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2 hover:bg-emerald-900/60 transition-all"
+            >
+              <MessageCircle className="w-4 h-4" /> Compartir por WhatsApp
+            </button>
+            <button
+              onClick={handleCopyLink}
+              className="py-2 px-4 rounded-xl bg-[#141417] border border-slate-800 text-slate-300 text-xs font-bold flex items-center gap-2 hover:text-white transition-all"
+            >
+              <Share2 className="w-4 h-4" /> Copiar Enlace
+            </button>
+          </div>
 
           {/* Technical Specs */}
           {product.specs && (

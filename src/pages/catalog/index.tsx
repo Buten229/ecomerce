@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Filter, SlidersHorizontal, Search } from 'lucide-react';
+import { ArrowUpDown } from 'lucide-react';
 import { productService } from '@/services/product.service';
 import { ProductCard } from '@/components/product/ProductCard';
 import { Product } from '@/types';
@@ -16,6 +16,7 @@ export const CatalogPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(categoryParam);
   const [searchTerm, setSearchTerm] = useState(searchQuery);
+  const [sortBy, setSortBy] = useState<'relevancia' | 'precio-asc' | 'precio-desc' | 'rating'>('relevancia');
 
   useEffect(() => {
     setSelectedCategory(categoryParam);
@@ -42,7 +43,7 @@ export const CatalogPage: React.FC = () => {
     setSearchParams(searchParams);
   };
 
-  const filteredProducts = products.filter((p) => {
+  let filteredProducts = products.filter((p) => {
     const matchesCategory =
       selectedCategory === 'Todos' || p.categoria.toLowerCase() === selectedCategory.toLowerCase();
     const matchesSearch =
@@ -53,16 +54,45 @@ export const CatalogPage: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
+  // Sorting logic
+  filteredProducts = [...filteredProducts].sort((a, b) => {
+    const priceA = a.precio_oferta || a.precio;
+    const priceB = b.precio_oferta || b.precio;
+
+    if (sortBy === 'precio-asc') return priceA - priceB;
+    if (sortBy === 'precio-desc') return priceB - priceA;
+    if (sortBy === 'rating') return b.rating - a.rating;
+    return 0; // relevancia por defecto
+  });
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Search & Header */}
-      <div>
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-2">
-          Catálogo de Productos
-        </h1>
-        <p className="text-sm text-slate-400">
-          Encuentra la mejor tecnología disponible en República Dominicana
-        </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Header & Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            Catálogo de Productos
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+            {filteredProducts.length} productos disponibles
+          </p>
+        </div>
+
+        {/* Sort Filter Selector */}
+        <div className="flex items-center gap-2 bg-[#141417] border border-slate-800 rounded-xl px-3 py-2 text-xs">
+          <ArrowUpDown className="w-4 h-4 text-violet-400 shrink-0" />
+          <span className="text-slate-400 font-semibold">Ordenar:</span>
+          <select
+            value={sortBy}
+            onChange={(e: any) => setSortBy(e.target.value)}
+            className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
+          >
+            <option value="relevancia" className="bg-[#141417]">Más Relevantes</option>
+            <option value="precio-asc" className="bg-[#141417]">Menor Precio (RD$)</option>
+            <option value="precio-desc" className="bg-[#141417]">Mayor Precio (RD$)</option>
+            <option value="rating" className="bg-[#141417]">Mejor Evaluados</option>
+          </select>
+        </div>
       </div>
 
       {/* Category Pills Slider */}
