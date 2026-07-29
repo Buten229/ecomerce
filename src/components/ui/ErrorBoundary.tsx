@@ -1,6 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
-import { Button } from './Button';
 
 interface Props {
   children?: ReactNode;
@@ -37,19 +36,18 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30">
               <AlertTriangle className="w-8 h-8" />
             </div>
-            <h2 className="font-outfit font-extrabold text-2xl text-white">
+            <h2 className="font-extrabold text-2xl text-white">
               Algo no salió como esperábamos
             </h2>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Hemos capturado el inconveniente de manera segura. Haz clic abajo para recargar la aplicación sin perder tu carrito.
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Hemos capturado el inconveniente de manera segura. Haz clic abajo para recargar la aplicación.
             </p>
-            <Button
+            <button
               onClick={this.handleReload}
-              className="w-full"
-              leftIcon={<RefreshCw className="w-4 h-4" />}
+              className="w-full py-3 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all"
             >
-              Recargar Aplicación
-            </Button>
+              <RefreshCw className="w-4 h-4" /> Recargar Aplicación
+            </button>
           </div>
         </div>
       );
