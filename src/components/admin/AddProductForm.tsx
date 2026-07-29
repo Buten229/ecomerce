@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Upload, Image as ImageIcon } from 'lucide-react';
 import { Product } from '@/types/product';
 
 interface AddProductFormProps {
@@ -14,6 +14,17 @@ export const AddProductForm: React.FC<AddProductFormProps> = ({ onAddProduct }) 
   const [stock, setStock] = useState('10');
   const [descripcion, setDescripcion] = useState('');
   const [imagen, setImagen] = useState('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagen(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,14 +125,22 @@ export const AddProductForm: React.FC<AddProductFormProps> = ({ onAddProduct }) 
           />
         </div>
 
-        <div>
-          <label className="text-xs font-semibold text-slate-400 block mb-1">URL de Imagen</label>
+        {/* Upload Image from Device */}
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-slate-400 block mb-1">Imagen del Producto</label>
+          <div className="flex items-center gap-2">
+            <label className="flex-1 cursor-pointer py-2 px-3 rounded-xl bg-[#0a0a0d] border border-dashed border-slate-700 hover:border-violet-500 text-slate-300 font-semibold text-xs flex items-center justify-center gap-1.5 truncate">
+              <Upload className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+              <span className="truncate">{imagen ? 'Imagen lista' : 'Subir desde dispositivo'}</span>
+              <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+            </label>
+          </div>
           <input
             type="url"
-            value={imagen}
+            value={imagen.startsWith('data:') ? '' : imagen}
             onChange={(e) => setImagen(e.target.value)}
-            placeholder="https://..."
-            className="w-full bg-[#0a0a0d] border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
+            placeholder="O pega URL (https://...)"
+            className="w-full bg-[#0a0a0d] border border-slate-800 rounded-xl px-3 py-1.5 text-[11px] text-white focus:outline-none focus:border-violet-500"
           />
         </div>
 

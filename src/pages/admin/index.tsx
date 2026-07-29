@@ -11,12 +11,17 @@ import { AdminMetrics } from '@/components/admin/AdminMetrics';
 import { AdminOrdersTable } from '@/components/admin/AdminOrdersTable';
 import { AddProductForm } from '@/components/admin/AddProductForm';
 import { InventoryTable } from '@/components/admin/InventoryTable';
+import { EditProductModal } from '@/components/admin/EditProductModal';
 
 export const AdminPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
   const [orders, setOrders] = useState<OrderData[]>([]);
+
+  // Edit Modal State
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     orderService.getOrders().then(setOrders);
@@ -43,6 +48,15 @@ export const AdminPage: React.FC = () => {
 
   const handleAddProduct = (newProduct: Product) => {
     setProducts([newProduct, ...products]);
+  };
+
+  const handleEditProduct = (prod: Product) => {
+    setSelectedProduct(prod);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEditProduct = (updated: Product) => {
+    setProducts(products.map((p) => (p.id === updated.id ? updated : p)));
   };
 
   const handleDeleteProduct = (id: string) => {
@@ -78,7 +92,18 @@ export const AdminPage: React.FC = () => {
 
       <AddProductForm onAddProduct={handleAddProduct} />
 
-      <InventoryTable products={products} onDeleteProduct={handleDeleteProduct} />
+      <InventoryTable
+        products={products}
+        onEditProduct={handleEditProduct}
+        onDeleteProduct={handleDeleteProduct}
+      />
+
+      <EditProductModal
+        product={selectedProduct}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleSaveEditProduct}
+      />
     </div>
   );
 };
