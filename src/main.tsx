@@ -3,16 +3,39 @@ import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Limpiar TODAS las sesiones mock/legacy al iniciar la app
-// Esto soluciona cuentas aleatorias generadas por versiones anteriores
-const CURRENT_SESSION_VERSION = 'v2';
-const sessionVersion = localStorage.getItem('ecomerce_session_version');
+// ============================================================
+// LIMPIEZA NUCLEAR DE SESIONES AL INICIAR
+// Borra TODO lo relacionado con auth para evitar cuentas fantasma
+// ============================================================
+function nukeAllLegacySessions() {
+  const keysToDelete: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+    if (
+      key.includes('user_session') ||
+      key.includes('registered_demo') ||
+      key.includes('supabase.auth') ||
+      key.includes('sb-') ||
+      key.includes('ecomerce-auth') ||
+      key.includes('lorenz') ||
+      key.includes('mock')
+    ) {
+      keysToDelete.push(key);
+    }
+  }
+  keysToDelete.forEach((k) => localStorage.removeItem(k));
 
-if (sessionVersion !== CURRENT_SESSION_VERSION) {
-  // Primera vez con esta versión — limpiar todo lo viejo
-  localStorage.removeItem('user_session_profile');
-  localStorage.removeItem('registered_demo_accounts');
-  localStorage.setItem('ecomerce_session_version', CURRENT_SESSION_VERSION);
+  // También limpiar sessionStorage
+  sessionStorage.clear();
+}
+
+// Correr limpieza si es una versión nueva del app
+const APP_VERSION = 'ecomerce-v3-clean';
+if (localStorage.getItem('__app_version') !== APP_VERSION) {
+  nukeAllLegacySessions();
+  localStorage.setItem('__app_version', APP_VERSION);
+  console.log('[Ecomerce] Sesiones legacy limpiadas ✅');
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
