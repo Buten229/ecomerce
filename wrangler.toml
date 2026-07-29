@@ -1,0 +1,4 @@
+# Este archivo es solo referencia — el deploy se hace via Cloudflare Pages
+# Build command: npm run build
+# Output directory: dist
+# Node version: 20
